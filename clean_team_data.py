@@ -1,0 +1,98 @@
+import pandas as pd
+import numpy as np
+import pickle
+
+use_cols = np.arange(26, 251)
+
+p1_features_cat = [
+        "Person.ID",
+        "Role",
+        "Country.of.Birth",
+        "Home.Language",
+        "Dept.No.",
+        "Faculty.No.",
+        "With.PHD",
+        "No..of.Years.in.Uni.at.Time.of.Grant",
+        ]
+
+p1_features_cont = [
+        "Year.of.Birth",
+        "Number.of.Successful.Grant",
+        "Number.of.Unsuccessful.Grant",
+        "A.",
+        "A",
+        "B",
+        "C"
+        ]
+
+type_dic = {}
+for i in np.arange(1,16):
+    for feat in p1_features_cat:
+        type_dic[feat + '.' + str(i)] = "str" #convert to cat later after manipulation
+    for feat in p1_features_cont:
+        type_dic[feat + '.' + str(i)] = "float"
+
+df = pd.read_csv("data/unimelb_training.csv", usecols=use_cols, dtype=type_dic)
+df.columns = pd.MultiIndex.from_tuples([tuple(c.rsplit('.', 1)) for c in df.columns])
+n_rows = df.shape[0]
+
+#syntax to get second level index
+#df.iloc[:, df.columns.get_level_values(1)=='1'].head(20)
+
+# fill in language based on country
+eng_countries = ['Australia', 'North America', 'Great Britain', 'New Zealand', 'South Africa']
+for i in np.arange(1, 16): 
+    is_eng_country = df["Country.of.Birth", str(i)].isin(eng_countries)
+    is_nan_country = df["Country.of.Birth", str(i)].isnull()
+    is_lang_nan = df["Home.Language", str(i)].isnull()
+    # 2 following lines give a warning that I'm trying to set a value on a 
+    # copy of a slice, but I have checked and it is working
+    df["Home.Language", str(i)].loc[is_eng_country & is_lang_nan] = 'English'
+    df["Home.Language", str(i)].loc[~is_eng_country & ~is_nan_country & is_lang_nan] = 'Other'
+
+    #convert string series to categorical
+    for feat in p1_features_cat:
+        df[feat, str(i)] = df[feat, str(i)].astype("category")
+
+# Now fill in missing data, only for the first person. This ensures that
+# when we aggregate teams, we will not have any missing data
+
+# fill missing continuous data (median)
+for feat in p1_features_cont:
+    df[feat, "1"] = df[feat, "1"].fillna(df[feat, "1"].median())
+
+# fill missing continuous data (mode)
+for feat in p1_features_cat:
+    df[feat, "1"] = df[feat, "1"].fillna(df[feat, "1"].mode()[0])
+
+# drop Person.ID column for now
+df.drop("Person.ID", axis=1, inplace=True)
+del p1_features_cat[0]
+
+def create_team_fracs_df(df_in, col_name):
+    #make a df_out representing the fractions of team members beloning to a given
+    #category for a given col_name
+
+    #create empty one hot for this column
+    all_values = pd.Series(df_in[col_name].values.ravel()).dropna().unique()
+    A_dummy = np.zeros((n_rows, len(all_values)))
+    df_out = pd.DataFrame(A_dummy, columns=all_values)
+
+    #loop through team members and get one hot for each. 
+    #Reindex like df_out and add to it
+    for i in np.arange(1, 16):
+        x = pd.get_dummies(df[col_name, str(i)]).reindex_like(df_out).fillna(0)
+        df_out = df_out.add(x)
+
+    #normalise by rows
+    df_out = df_out.div(df_out.sum(axis=1), axis=0)
+
+    return df_out
+
+# create dataframe for learning algorithm
+X_team = pd.DataFrame()
+for feat in p1_features_cat:                                                   
+    x = create_team_fracs_df(df, feat)                                         
+    X_team = pd.concat([X_team, x], axis=1) 
+
+pickle.dump(X_team, open("X_team_cat_fracs.p", "wb"))
