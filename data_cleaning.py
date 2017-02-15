@@ -40,9 +40,9 @@ df["Contract.Value.Band...see.note.A"] = df["Contract.Value.Band...see.note.A"].
 
 ###############################################################################
 
-df["Sponsor.Code"] = df["Sponsor.Code"].astype('category', ordered = False)
+df.drop(["Sponsor.Code"], axis = 1, inplace = True)
+df.drop(["Grant.Category.Code"], axis = 1, inplace = True)
 
-df["Grant.Category.Code"] = df["Grant.Category.Code"].astype('category', ordered = False)
 
 
 ###############################################################################
@@ -121,7 +121,7 @@ for i in range(1,6):
                  "SEO.Code." + str(i), "SEO.Percentage." + str(i)],
                    axis = 1, inplace = True)
 
-df2.dropna(axis = 1, how = 'any', inplace = True)df2.dropna(axis = 1, how = 'any', inplace = True)
+df2.dropna(axis = 1, how = 'any', inplace = True)
 ###############################################################################
 
 #### Dump the first park of data to a pickle file
