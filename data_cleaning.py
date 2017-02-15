@@ -121,7 +121,7 @@ for i in range(1,6):
                  "SEO.Code." + str(i), "SEO.Percentage." + str(i)],
                    axis = 1, inplace = True)
 
-
+df2.dropna(axis = 1, how = 'any', inplace = True)df2.dropna(axis = 1, how = 'any', inplace = True)
 ###############################################################################
 
 #### Dump the first park of data to a pickle file
