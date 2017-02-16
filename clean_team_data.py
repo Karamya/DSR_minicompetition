@@ -6,7 +6,7 @@ import pickle
 ### Define various column names and categories
 ######################################################################
 
-use_cols = np.arange(26, 251)
+use_cols = np.concatenate(([0], np.arange(26, 251))) # 0 is for Grant.Application.ID
 
 p1_features_cat_noorder = [
     "Person.ID",
@@ -115,7 +115,9 @@ del p1_features_cat_noorder[0]
 ### Create dataframe for learning algorithm
 ######################################################################
 
-X_team = pd.DataFrame()
+X_team = pd.read_csv("data/unimelb_training.csv", usecols=[0], dtype=int, 
+                     index_col=0)
+#X_team = pd.concat([X_team, df["Grant.Application.ID"]], axis=1) 
 
 ######################################################################
 ### Categorical feature engineering
