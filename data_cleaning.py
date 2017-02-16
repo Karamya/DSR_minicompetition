@@ -52,8 +52,62 @@ df.drop(["Grant.Category.Code"], axis = 1, inplace = True)
 
 ###############################################################################
 
-df["Start.date"] = pd.to_datetime(df["Start.date"])
-df["Start.date"] = df["Start.date"].astype('int64')//1e15
+#df["Start.date"] = pd.to_datetime(df["Start.date"])
+
+
+###############################################################################
+
+#### Split Start.Date to year, month and day, day of week, week of year
+
+###############################################################################
+
+df["Start.Year"] = pd.DatetimeIndex(df["Start.date"]).year
+df["Start.Month"] = pd.DatetimeIndex(df["Start.date"]).month
+df["Start.Year"] = df["Start.Year"]- df["Start.Year"].min() + 1 ### Making year column from 2005-2008 to 1-4
+df["Start.Day"] = pd.DatetimeIndex(df["Start.date"]).day
+df["Start.DayofWeek"] = pd.DatetimeIndex(df["Start.date"]).dayofweek
+df["Start.WeekofYear"] = pd.DatetimeIndex(df["Start.date"]).weekofyear
+
+
+def conv_day(a): return a.split("/")[0]
+def conv_month(a): return a.split("/")[1]
+def conv_season(a):
+    month = int(conv_month(a))
+    day = int(conv_day(a))
+    if month in [1,2]:
+        return 0 # "Winter"
+    elif month in [4, 5]:
+        return 1 # "Spring"
+    elif month in [7, 8]:
+        return 2 # "Summer"
+    elif month in [10, 11]:
+        return 3 # "Autumn"
+    elif month in [3]:
+        if day <= 21:
+            return 0 # "Winter"
+        else:
+            return 1 # "Spring"
+    elif month in [6]:
+        if day <= 21:
+            return 1 # "Spring"
+        else:
+            return 2 # "Summer"
+    elif month in [9]:
+        if day <= 21:
+            return 2 # "Summer"
+        else:
+            return 3 # "Autumn"
+    elif month in [12]:
+        if day <= 21:
+            return 3 # "Autumn"
+        else:
+            return 0 # "Winter"
+    return -1
+df["Start.Season"] = df["Start.date"].apply(conv_season)
+
+
+df.drop(["Start.date"], axis = 1, inplace = True)
+
 
 ###############################################################################
 
